@@ -29,30 +29,37 @@ export default function SessionsView() {
   const [refreshing, setRefreshing] = useState(false)
   const [rangeDays, setRangeDays] = useState(45)
 
-  const loadData = () =>
-    fetch('substrate.json?t=' + Date.now()).then((r) => r.json()).then((d) => {
+  // Dev runs a live Python backend (/api/refresh). A hosted static build has no
+  // backend, so it swaps between pre-built per-window snapshots (substrate-N.json).
+  const LIVE = import.meta.env.DEV
+
+  const loadData = (file = 'substrate.json') =>
+    fetch(file + '?t=' + Date.now()).then((r) => r.json()).then((d) => {
       setData(d); setValue(d.meta.value_per_lead); setNorthStar(d.meta.north_star_default)
       setRangeDays(d.meta.window_days || 45)
     })
 
   useEffect(() => { loadData().catch((e) => console.error('load failed', e)) }, [])
 
-  const refresh = async (days) => {
-    if (refreshing) return
-    setRefreshing(true)
-    try {
+  // Fetch the data for a window: live re-pull in dev, pre-built snapshot in prod.
+  const fetchWindow = async (days) => {
+    if (LIVE) {
       const res = await fetch('/api/refresh' + (days ? '?days=' + days : ''), { method: 'POST' })
       const body = await res.json().catch(() => ({}))
       if (!res.ok || body.ok === false) throw new Error(body.error || ('HTTP ' + res.status))
       await loadData()
-    } catch (e) {
-      console.error('refresh failed', e)
-      alert('Refresh failed: ' + e.message)
-    } finally {
-      setRefreshing(false)
+    } else {
+      await loadData(`substrate-${days}.json`)
     }
   }
-  const changeRange = (days) => { setRangeDays(days); refresh(days) }
+
+  const run = async (fn) => {
+    if (refreshing) return
+    setRefreshing(true)
+    try { await fn() } catch (e) { console.error(e); alert('Failed: ' + e.message) } finally { setRefreshing(false) }
+  }
+  const refresh = () => run(() => fetchWindow(rangeDays))
+  const changeRange = (days) => { setRangeDays(days); run(() => fetchWindow(days)) }
 
   if (!data) return <div className="loading"><div className="spin" /> Materializing substrate from PostHog…</div>
 
@@ -71,28 +78,22 @@ export default function SessionsView() {
           </div>
           <div className="controls">
             <div className="ctl live"><span className="dot" /> live · PostHog</div>
-            {import.meta.env.DEV && (
-              <button className={'ctl refresh' + (refreshing ? ' busy' : '')} onClick={() => refresh()} disabled={refreshing}
-                title={data.meta.generated_at ? 'Last refreshed ' + new Date(data.meta.generated_at).toLocaleString() : 'Re-pull from PostHog'}>
-                <span className="ic">⟳</span>{refreshing ? 'Refreshing…' : 'Refresh'}
-              </button>
-            )}
+            <button className={'ctl refresh' + (refreshing ? ' busy' : '')} onClick={refresh} disabled={refreshing}
+              title={(LIVE ? 'Re-pull from PostHog' : 'Reload the latest published snapshot') + (data.meta.generated_at ? ' · built ' + new Date(data.meta.generated_at).toLocaleString() : '')}>
+              <span className="ic">⟳</span>{refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
             <div className="ctl">
               <label>North-star</label>
               <select value={northStar} onChange={(e) => setNorthStar(e.target.value)}>
                 {data.meta.north_stars.map((n) => <option key={n.key} value={n.key}>{n.label}</option>)}
               </select>
             </div>
-            {import.meta.env.DEV ? (
-              <div className="ctl" title={`${data.meta.date_range[0]} → ${data.meta.date_range[1]} · re-pulls PostHog`}>
-                <label>Range</label>
-                <select value={rangeDays} onChange={(e) => changeRange(Number(e.target.value))} disabled={refreshing}>
-                  {[7, 14, 30, 45, 90].map((d) => <option key={d} value={d}>Last {d} days</option>)}
-                </select>
-              </div>
-            ) : (
-              <div className="ctl"><label>Range</label><span>{data.meta.date_range[0]?.slice(5)} – {data.meta.date_range[1]?.slice(5)}</span></div>
-            )}
+            <div className="ctl" title={`${data.meta.date_range[0]} → ${data.meta.date_range[1]}`}>
+              <label>Range</label>
+              <select value={rangeDays} onChange={(e) => changeRange(Number(e.target.value))} disabled={refreshing}>
+                {[7, 14, 30, 45, 90].map((d) => <option key={d} value={d}>Last {d} days</option>)}
+              </select>
+            </div>
           </div>
         </div>
 
