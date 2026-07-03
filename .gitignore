@@ -1,0 +1,13 @@
+# secrets
+.env
+
+# python
+__pycache__/
+*.pyc
+
+# node
+web/node_modules/
+
+# logs
+logs/
+*.log

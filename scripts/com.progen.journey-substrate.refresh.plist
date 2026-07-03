@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.progen.journey-substrate.refresh</string>
+
+    <!-- Re-pull the PostHog substrate every night. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/nvinay/Downloads/journey-substrate/scripts/refresh.sh</string>
+    </array>
+
+    <!-- Run at 03:00 local time daily. If the Mac was asleep at 03:00,
+         launchd runs it once on the next wake. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/nvinay/Downloads/journey-substrate</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/nvinay/Downloads/journey-substrate/logs/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/nvinay/Downloads/journey-substrate/logs/launchd.err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
