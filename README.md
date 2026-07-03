@@ -36,13 +36,6 @@ cp .env.example .env      # paste your PostHog personal API key into PH_KEY
 Without a key, the snapshot still renders — only Refresh/Range are disabled.
 See [REFRESH.md](REFRESH.md) for the refresh endpoint and the nightly cron.
 
-### Deploy on Vercel (for a shareable live URL)
-1. Vercel → **Add New… → Project** → import this repo.
-2. Set **Root Directory** = `web` (the Vite app). Framework **Vite** auto-detects
-   (`vite build` → `dist`); `web/vercel.json` handles the SPA fallback.
-3. Deploy. No env vars needed — the build serves the committed snapshot.
-   (Refresh/Range are dev-only and hidden in production.)
-
 ---
 
 ## The key idea: session data on an identity
